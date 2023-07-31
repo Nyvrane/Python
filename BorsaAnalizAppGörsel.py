@@ -3,9 +3,11 @@ import requests
 from bs4 import BeautifulSoup
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QTextEdit, QPushButton, QVBoxLayout
+from PyQt5.QtGui import QIcon
 
 # Ana fonksiyonumuzda kullanacağımız hissenin puanını temsil eden global bir puan değişkeni oluşturalım.
 puan = 0
+bedelsizpotansiyeli = 1
 
 
 class AnaPencere(QWidget):
@@ -17,6 +19,7 @@ class AnaPencere(QWidget):
 
         # Pencere başlığını ayarlayalım
         self.setWindowTitle("fromNyvrane - Hisse Senedi Temel Analiz Programı")
+        self.setWindowIcon(QIcon('logo.png'))
 
         # Arayüz öğelerini düzenlemek için bir dikey düzen oluşturalım
         vbox = QVBoxLayout()
@@ -36,8 +39,10 @@ class AnaPencere(QWidget):
         # Çıktı alanını oluşturalım ve dikey düzene ekleyelim
         self.output = QTextEdit()
         vbox.addWidget(self.output)
-        self.output.append("Önemli Not: Bu program eğitim amacıyla yapılmış olup hiçbir şekilde yatırım tavsiyesi içermemektedir.")
-        self.output.append("İkinci Not: Analiz et tuşuna bir kez basmanız yeterlidir. Analiz sonucu gelene kadar bekleyin.")
+        self.output.append("Önemli Not: Bu program eğitim amacıyla yapılmış olup hiçbir şekilde yatırım tavsiyesi "
+                           "içermemektedir.")
+        self.output.append("İkinci Not: Analiz et tuşuna bir kez basmanız yeterlidir. Analiz sonucu gelene kadar "
+                           "bekleyin.")
 
         # Dikey düzeni pencereye ekleyelim
         self.setLayout(vbox)
@@ -53,15 +58,13 @@ class AnaPencere(QWidget):
         sembol = self.textbox.text().upper()
         self.output.clear()
 
-        self.output.append("Analiz başlatılıyor...")
-        self.output.repaint() # çıktı alanının güncellenmesi için yenileyelim
-
+        self.output.append("Analiz ediliyor...")
+        self.output.repaint()  # çıktı alanının güncellenmesi için yenileyelim
 
         # yukarıda belirttiğimiz puan değişkenini içeriye aktaralım. Hesaplamalar bitince puanı bir sonraki hissede
         # yeniden hesaplamak için sıfırlayacağız.
         global puan
         # Başlık yazımızı oluşturalım
-
 
         # Kullanıcıdan hesaplanacak hissenin sembolünü isteyelim
         hisse = self.textbox.text()
@@ -90,14 +93,22 @@ class AnaPencere(QWidget):
 
         # Aldığımız içerikteki ana etiketleri bulup liste içerisine atalım.
         bilancotaglar = bilancosoup.find_all("tr",
-                                             {"class": "hover:bg-gray-800 focus:bg-gray-800 focus:outline-none group"})
+                                             {"class": "group hover:bg-black/80 border-b border-neutral-white-10"})
+        bilancotaglar2 = bilancosoup.find_all("tr",
+                                              {"class": "group hover:bg-black/80 text-gray-100 font-bold"})
+        bilancotaglar3 = bilancosoup.find_all("tr",
+                                              {
+                                                  "class": "group hover:bg-black/80 text-gray-100 font-bold border-b border-neutral-white-10"})
         gelirtablosutaglar = gelirtablosusoup.find_all("tr", {
-            "class": "hover:bg-gray-800 focus:bg-gray-800 focus:outline-none group"})
+            "class": "group hover:bg-black/80 border-b border-neutral-white-10"})
+        gelirtablosutaglar2 = gelirtablosusoup.find_all("tr", {
+            "class": "group hover:bg-black/80 text-gray-100 font-bold"})
+        gelirtablosutaglar3 = gelirtablosusoup.find_all("tr", {
+            "class": "group hover:bg-black/80 text-gray-100 font-bold border-b border-neutral-white-10"})
         sektortaglar = sektorsoup.find_all("a", {
-            "class": "hover:text-white border-l-4 border-transparent group flex items-center pl-7 pr-2 py-2 text-sm "
-                     "font-medium hover:bg-gray-800 no-underline"})
+            "class": "cursor-pointer"})
         anaadrestaglar = anaadressoup.find_all("tr", {
-            "class": "odd:bg-gray-900 even:bg-gray-900/20 border-b border-gray-700"})
+            "class": "group hover:bg-neutral-black-30 border-b border-neutral-white-10"})
 
         # Birazdan alacağımız verileri kullanım kolaylığı için bilanço verilerinde sözlük yapısında kullanacağız.
         bilancoveriler = {}
@@ -105,8 +116,24 @@ class AnaPencere(QWidget):
         # Hisse bilanço değerlerinin ve onların isimlerinin yukarıdaki sözlüğe eklenmesini sağlayalım.
         for i in bilancotaglar:
             kalem = i.find("div", {"class": "flex-grow"}).text
-            miktar = i.find("td", {"class": "fintable__number"}).text
-            bilancoveriler.update({kalem: miktar})
+            miktar_elements = i.find("td", {"class": "text-right pr-3 bg-black/40"}).find_all("span", {
+                "class": "inline-flex items-center tabular-nums"})
+            miktar = miktar_elements[1].text if len(miktar_elements) >= 2 else ""
+            bilancoveriler[kalem] = miktar
+
+        for i in bilancotaglar2:
+            kalem = i.find("div", {"class": "flex-grow"}).text
+            miktar_elements = i.find("td", {"class": "text-right pr-3 bg-black/40"}).find_all("span", {
+                "class": "inline-flex items-center tabular-nums"})
+            miktar = miktar_elements[1].text if len(miktar_elements) >= 2 else ""
+            bilancoveriler[kalem] = miktar
+
+        for i in bilancotaglar3:
+            kalem = i.find("div", {"class": "flex-grow"}).text
+            miktar_elements = i.find("td", {"class": "text-right pr-3 bg-black/40"}).find_all("span", {
+                "class": "inline-flex items-center tabular-nums"})
+            miktar = miktar_elements[1].text if len(miktar_elements) >= 2 else ""
+            bilancoveriler[kalem] = miktar
 
         # Birazdan alacağımız verileri kullanım kolaylığı için gelir tablosu verilerinde sözlük yapısında kullanacağız.
         gelirtablosuveriler = {}
@@ -114,7 +141,23 @@ class AnaPencere(QWidget):
         # Hisse gelir tablosu değerlerinin ve onların isimlerinin yukarıdaki sözlüğe eklenmesini sağlayalım.
         for i in gelirtablosutaglar:
             kalem = i.find("div", {"class": "flex-grow"}).text
-            miktar = i.find("td", {"class": "fintable__number"}).text
+            miktar_elements = i.find("td", {"class": "text-right pr-3 bg-black/40"}).find_all("span", {
+                "class": "inline-flex items-center tabular-nums"})
+            miktar = miktar_elements[1].text if len(miktar_elements) >= 2 else ""
+            gelirtablosuveriler.update({kalem: miktar})
+
+        for i in gelirtablosutaglar2:
+            kalem = i.find("div", {"class": "flex-grow"}).text
+            miktar_elements = i.find("td", {"class": "text-right pr-3 bg-black/40"}).find_all("span", {
+                "class": "inline-flex items-center tabular-nums"})
+            miktar = miktar_elements[1].text if len(miktar_elements) >= 2 else ""
+            gelirtablosuveriler.update({kalem: miktar})
+
+        for i in gelirtablosutaglar3:
+            kalem = i.find("div", {"class": "flex-grow"}).text
+            miktar_elements = i.find("td", {"class": "text-right pr-3 bg-black/40"}).find_all("span", {
+                "class": "inline-flex items-center tabular-nums"})
+            miktar = miktar_elements[1].text if len(miktar_elements) >= 2 else ""
             gelirtablosuveriler.update({kalem: miktar})
 
         # Birazdan alacağımız verileri kullanım kolaylığı için ana adres verilerinde sözlük yapısında kullanacağız.
@@ -122,7 +165,7 @@ class AnaPencere(QWidget):
 
         # Hisse adresindeki değerlerin ve onların isimlerinin yukarıdaki sözlüğe eklenmesini sağlayalım.
         for i in anaadrestaglar:
-            kalem = i.find("td", {"class": "pl-4 text-white"}).text
+            kalem = i.find("td", {"class": "pl-4 text-neutral-white-70 font-semibold"}).text
             miktar = i.find("td", {"class": "text-right py-3.5 pr-3"}).text
             anaadresveriler.update({kalem: miktar})
 
@@ -131,10 +174,12 @@ class AnaPencere(QWidget):
         # print(gelirtablosuveriler)
 
         # Hissenin fiyatını içerikten alalım. Yanlış girilmesi durumunda kullanıcıdan yeni işlem isteyelim.
+        # print(bilancotext)
         try:
-            ilkindex = bilancotext.index('"price":') + 8
+            ilkindex = bilancotext.index('price') + 8
             sonindex = bilancotext.index(',', ilkindex)
             hissefiyati = float(bilancotext[ilkindex:sonindex])
+            # print(hissefiyati)
         except ValueError:
             self.output.append("Geçersiz hisse adı.")
             # Butonu tekrar etkinleştirelim
@@ -201,82 +246,86 @@ class AnaPencere(QWidget):
         # dorduncu kriter şirketin favök marjını sektör marjı ile kıyaslayıp karlılık hesaplıyor.
         def dorduncukriter(favok, satisgelirleri, hisse):
             global puan
-            sektortaglar = sektorsoup.find_all("a", {
-                "class": "hover:text-white border-l-4 border-transparent group flex items-center pl-7 pr-2 py-2 text-sm "
-                         "font-medium hover:bg-gray-800 no-underline"})
+            sektortaglar = sektorsoup.find_all("div", {
+                "class": "divide-y divide-neutral-white-10 sm:divide-y-0 sm:grid sm:grid-cols-2"})
             sektoradlari = []
-            for i in sektortaglar:
-                favoksektorlink = "https://fintables.com/" + i.get("href")
-                favoksektorcevap = requests.get(favoksektorlink).content
-                favoksektorsoup = BeautifulSoup(favoksektorcevap, "html.parser")
-                aetiketleri = favoksektorsoup.find_all("a")
-                for aetiketi in aetiketleri:
-                    if hisse in aetiketi.get_text().lower():
-                        sektoradlari.append(f"{favoksektorlink.replace('https://fintables.com//sektorler/', '')}")
+            for sektortag in sektortaglar:
+                a_etiketleri = sektortag.find_all("a")
+                for a_etiketi in a_etiketleri:
+                    favoksektorlink = "https://fintables.com/" + a_etiketi.get("href")
+                    favoksektorcevap = requests.get(favoksektorlink).content
+                    favoksektorsoup = BeautifulSoup(favoksektorcevap, "html.parser")
+                    aetiketleri = favoksektorsoup.find_all("a")
+                    for aetiketi in aetiketleri:
+                        if hisse in aetiketi.get_text().lower():
+                            sektoradlari.append(f"{favoksektorlink.replace('https://fintables.com//sektorler/', '')}")
 
-            try:
-                if anaadressoup.find("span", {"class": "block xl:inline text-gray-300 text-xs ml-1"}).text == "(x1000)":
-                    # print(anaadressoup.find("span", {"class": "block xl:inline text-gray-300 text-xs ml-1"}).text)
-                    favok = favok + "000"
-            except AttributeError:
-                pass
             favok = favok.replace(".", "")
             favokmarj = int(favok) / int(satisgelirleri.replace(".", "")) * 100
+            print(satisgelirleri)
             if favokmarj == 100000.0:
                 favokmarj = 10
 
             sektorfavokmarj = {"ambalaj": 17.46, "ana-metal": 14.58, "araci-kurum": 10.0, "bankacilik": 10.0,
                                "bilisim-ve-yazilim": 10.0, "cam-seramik-porselen": 10.0,
                                "dayanikli-tuketim-urunleri": 10.0,
-                               "destek-ve-hizmet": 10.0, "emeklilik": 10.0, "enerji-uretim-ve-dagitim": 10.0,
-                               "faktoring": 10.0, "finansal-kiralama": 10.0, "gayrimenkul": 10.0,
-                               "girisim-sermayesi-yatirim-ortakligi": 10.0, "gida-ve-icecek": 10.0, "haberlesme": 10.0,
-                               "holding": 10.0, "kagit-ve-kagit-urunleri": 10.0, "kimya-ve-plastik": 10.0,
+                               "destek-ve-hizmet": 10.0, "emeklilik": 10.0,"enerji-teknolojileri": 10.0,
+                               "enerji-uretim-ve-dagitim": 10.0, "faktoring": 10.0, "finansal-kiralama": 10.0,
+                               "gayrimenkul": 10.0, "gida-perakendeciligi" : 10.0, "gida-ve-icecek": 10.0,
+                               "girisim-sermayesi-yatirim-ortakligi": 10.0,
+                               "giyim-tekstil-ve-deri-urunleri-perakendeciligi" : 10.0, "haberlesme": 10.0,
+                               "holding": 10.0, "ilac-ve-saglik" : 10.0, "imalat": 10.0, "insaat": 10.0,
+                               "kagit-ve-kagit-urunleri": 10.0, "kimya-ve-plastik": 10.0,
                                "madencilik-ve-tas-ocakciligi": 10.0, "menkul-kiymet-yatirim-ortakligi": 10.0,
                                "metal-esya-ve-makine": 10.0, "mobilya-ve-dekorasyon": 10.0, "otomotiv": 10.0,
-                               "otomotiv-yan-sanayi": 10.0, "savunma": 10.0, "sigorta": 10.0, "spor": 10.0,
-                               "tarim-hayvancilik-balikcilik": 10.0, "tas-toprak-cimento": 10.0,
+                               "otomotiv-yan-sanayi": 10.0, "savunma": 10.0, "servis-tasimaciligi-ve-arac-kiralama": 10.0,
+                               "sigorta": 10.0, "spor": 10.0, "tarim-hayvancilik-balikcilik": 10.0,
+                               "tasarruf-finansman" : 10.0, "tas-toprak-cimento": 10.0, "teknolojik-urun-ticareti" : 10.0,
                                "tekstil-giyim-ve-deri": 10.0, "toptan-ve-perakende-ticaret": 10.0, "turizm": 10.0,
-                               "ulastirma": 10.0, "varlik-yonetimi": 10.0, "ilac-ve-saglik": 10.0, "imalat": 10.0,
-                               "insaat": 10.0}
+                               "ulastirma": 10.0, "varlik-yonetimi": 10.0}
+
 
             for sektoradi in sektoradlari:
                 if favokmarj / sektorfavokmarj.get(sektoradi, 1) >= 1:
-                    self.output.append("4.Kriter - İYİ: Favök Marjı: {:.2f}, {} sektörü ortalamasının üzerinde"
-                                       .format(favokmarj, (sektoradi.replace('-', ' ').upper())))
+                    self.output.append("4.Kriter - İYİ: Favök Marjı: {:.2f}, {} sektörü ortalamasının: {} üzerinde"
+                                       .format(favokmarj, (sektoradi.replace('-', ' ').upper()),
+                                               sektorfavokmarj[sektoradi]))
                     if len(sektoradlari) > 1:
                         puan += 10
                     else:
                         puan += 20
                 elif 1 > favokmarj / sektorfavokmarj.get(sektoradi, 1) >= 0.9:
-                    self.output.append("4.Kriter - ORTA: Favök Marjı: {:.2f}, {} sektörü ortalamasına yakın"
-                                       .format(favokmarj, sektoradi.replace('-', ' ').upper()))
+                    self.output.append("4.Kriter - ORTA: Favök Marjı: {:.2f}, {} sektörü ortalamasına: {} yakın"
+                                       .format(favokmarj, sektoradi.replace('-', ' ').upper(),
+                                               sektorfavokmarj[sektoradi]))
                     if len(sektoradlari) > 1:
                         puan += 5
                     else:
                         puan += 10
                 else:
-                    self.output.append("4.Kriter - KÖTÜ: Favök Marjı: {:.2f}, {} sektörü ortalamasının altında"
-                                       .format(favokmarj, sektoradi.replace('-', ' ').upper()))
+                    self.output.append("4.Kriter - KÖTÜ: Favök Marjı: {:.2f}, {} sektörü ortalamasının: {} altında"
+                                       .format(favokmarj, sektoradi.replace('-', ' ').upper(),
+                                               sektorfavokmarj[sektoradi]))
+
 
         # besincikriter ise hissenin bedelsiz potansiyelini hesaplıyor.
         def besincikriter(ozkaynaklar, odenmissermaye):
-            global puan
+            global puan, bedelsizpotansiyeli
             ozkaynaklar = ozkaynaklar.replace(".", "")
             odenmissermaye = odenmissermaye.replace(".", "")
-            bedelsizpotansiyeli = int(ozkaynaklar) / int(odenmissermaye) * 100
-            if bedelsizpotansiyeli >= 1000:
-                self.output.append(f"5.Kriter - İYİ: Hissenin bedelsiz potansiyeli: % {int(bedelsizpotansiyeli)}")
+            bedelsizpotansiyeli = int(ozkaynaklar) / int(odenmissermaye)
+            bedelsizpotyuzde = int(bedelsizpotansiyeli) * 100
+            if bedelsizpotyuzde >= 1000:
+                self.output.append(f"5.Kriter - İYİ: Hissenin bedelsiz potansiyeli: % {bedelsizpotyuzde}")
                 puan += 20
-            elif bedelsizpotansiyeli >= 600:
-                self.output.append(f"5.Kriter - ORTA: Hissenin bedelsiz potansiyeli: % {int(bedelsizpotansiyeli)}")
+            elif bedelsizpotyuzde >= 600:
+                self.output.append(f"5.Kriter - ORTA: Hissenin bedelsiz potansiyeli: % {bedelsizpotyuzde}")
                 puan += 10
             else:
-                self.output.append(f"5.Kriter - KÖTÜ: Hissenin bedelsiz potansiyeli: % {int(bedelsizpotansiyeli)}")
+                self.output.append(f"5.Kriter - KÖTÜ: Hissenin bedelsiz potansiyeli: % {bedelsizpotyuzde}")
 
         # hedefhesapla hissenin PDDD ve FK'ya göre sektörlere kıyasla gidebileceği hedef fiyatları belirliyor.
         def hedefhesapla(hisse):
-            self.output.append("Hissenin hedefi hesaplanıyor...\n")
             for i in sektortaglar:
                 sektorlink = yenisektoradres + i.get("href")
                 sektorcevap = requests.get(sektorlink).content
@@ -290,7 +339,7 @@ class AnaPencere(QWidget):
                             f'sektörüne göre hedef: ')
                         dongusektorcevap = requests.get(sektorlink).content
                         dongusektorsoup = BeautifulSoup(dongusektorcevap, "html.parser")
-                        sektoragirlikli = dongusektorsoup.find_all("tr", {"class": "text-gray-100"})
+                        sektoragirlikli = dongusektorsoup.find_all("tr", {"class": "group hover:bg-neutral-black-30"})
                         agirlikliortalamaliste = []
                         for agirlikli in sektoragirlikli:
                             if "ağırlıklı ortalama" in agirlikli.text.lower():
@@ -323,36 +372,44 @@ class AnaPencere(QWidget):
                             except:
                                 fkhedef = float(sektorfk) / float(hissepddd) * float(hissefiyati)
                         anahedef = (pdddhedef + fkhedef) / 2
+                        bedelsizhedef = bedelsizpotansiyeli * anahedef / 10
 
                         self.output.append(
                             '*' * 30 + "\nHisse Fiyatı: {:.2f} TL\nPDDD'ye Göre Hedef: {:.2f} TL\nFK'ya Göre "
-                                       "Hedef: {:.2f} TL\nAna Hedef: {:.2f} TL\n".format(hissefiyati, pdddhedef,
-                                                                                         fkhedef,
-                                                                                         anahedef) + '*' * 30 + "\n")
+                                       "Hedef: {:.2f} TL\nBedelsiz Potansiyeli ile Ortalama Hedef: {:.2f} TL"
+                                       "\nTemel Analiz Sonucu Ana Hedef: {:.2f} TL\n".format(hissefiyati, pdddhedef,
+                                            fkhedef, bedelsizhedef, anahedef) + '*' * 30 + "\n")
                         # print(hissefk, hissepddd, hissefdfavok, sektorfk, sektorpddd, sektorfdfavok)
+
 
         # Burada yukarıda sözlük yapısı içerisine aldığımız verileri key değeri vererek çağırıyoruz.
         # Bazı bilançolarda bu veriler bulunmuyor, hata almamak için get fonksiyonu ile 1 değerini veriyoruz.
         # Bilançolar milyon/milyar değerler içerdiğinden buradaki 1 değerinin sonuca etkisi yok denecek kadar az.
-        birincikriter(bilancoveriler.get("dönen varlıklar", "1"), bilancoveriler.get("kısa vadeli yükümlülükler", "1"),
-                      gelirtablosuveriler.get("(esas faaliyet dışı) finansal gelirler", "1"),
-                      gelirtablosuveriler.get("(esas faaliyet dışı) finansal giderler (-)", "-1"),
-                      gelirtablosuveriler.get("brüt kar (zarar)", "1"))
+        birincikriter(bilancoveriler.get("Toplam Dönen Varlıklar", "1"),
+                      bilancoveriler.get("Toplam Kısa Vadeli Yükümlülükler", "1"),
+                      gelirtablosuveriler.get("(Esas Faaliyet Dışı) Finansal Gelirler", "1"),
+                      gelirtablosuveriler.get("(Esas Faaliyet Dışı) Finansal Giderler (-)", "-1"),
+                      gelirtablosuveriler.get("Brüt Kar (Zarar)", "1"))
 
-        ikincikriter(bilancoveriler.get("nakit ve nakit benzerleri", "1"), bilancoveriler.get("finansal borçlar", "1"),
-                     bilancoveriler.get("finansal yatırımlar", "1"))
+        ikincikriter(bilancoveriler.get("Nakit ve Nakit Benzerleri", "1"), bilancoveriler.get("Finansal Borçlar", "1"),
+                     bilancoveriler.get("Finansal Yatırımlar", "1"))
 
-        ucuncukriter(bilancoveriler.get("toplam varlıklar", bilancoveriler.get("varlıklar toplamı", "1")),
-                     bilancoveriler.get("özkaynaklar", "1"))
+        ucuncukriter(bilancoveriler.get("Toplam Varlıklar", bilancoveriler.get("VARLIKLAR TOPLAMI",
+                                                                               bilancoveriler.get("TOPLAM VARLIKLAR",
+                                                                                                  "1"))),
+                     bilancoveriler.get("Toplam Özkaynaklar",
+                                        bilancoveriler.get("ÖZKAYNAKLAR", "1")))
 
-        dorduncukriter(anaadresveriler.get("FAVÖK", "1"), gelirtablosuveriler.get("satış gelirleri", "1"),
+        dorduncukriter(anaadresveriler.get("FAVÖK", "1"), gelirtablosuveriler.get("Satış Gelirleri", "1"),
                        hisse.lower())
 
-        besincikriter(bilancoveriler.get("özkaynaklar", "1"), bilancoveriler.get("ödenmiş sermaye", "1"))
+        besincikriter(bilancoveriler.get("Toplam Özkaynaklar", bilancoveriler.get("ÖZKAYNAKLAR", "1")),
+                      bilancoveriler.get("Ödenmiş Sermaye", "1"))
 
         # Hissenin kriterlere göre puanını hesaplıyoruz.
         self.output.append(f"\nPUAN: {hisse} hissesi inceleme sonucunda 100 üzerinden {puan} puan almıştır.\n")
-        # Yukarıda yazdırdığımız için artık puanla işimiz yok bu yüzden 0 yapıp puanı bir sonraki fonksiyona hazır ediyoruz.
+        # Yukarıda yazdırdığımız için artık puanla işimiz yok bu yüzden 0 yapıp puanı bir sonraki fonksiyona hazır
+        # ediyoruz.
         puan = 0
 
         # Son fonksiyon olan hedef hesaplama fonksiyonunu çağırıyoruz.
